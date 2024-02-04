@@ -8,6 +8,17 @@ from datetime import datetime
 import pathlib
 
 
+def delete_aae_files(base_dir):
+    for foldername, _, filenames in os.walk(base_dir):
+        for filename in filenames:
+            if filename.lower().endswith('.aae'):
+                file_path = os.path.join(foldername, filename)
+                try:
+                    os.remove(file_path)
+                    print(f"Deleted AAE file: {file_path}")
+                except Exception as e:
+                    print(f"Error deleting AAE file {file_path}: {e}")
+
 def get_creation_time_from_ffprobe(file_path):
     cmd = [
         'ffprobe',
@@ -123,6 +134,10 @@ def find_multicam_matches(base_dir):
 
 def process_files(base_dir, sorted_dir):
     for foldername, _, filenames in os.walk(base_dir):
+
+        if os.path.abspath(foldername).startswith(sorted_dir):
+            continue
+
         for filename in filenames:
             file_path = os.path.join(foldername, filename)
 
@@ -151,7 +166,7 @@ def process_files(base_dir, sorted_dir):
                     print(f"Error processing image {file_path}: {e}")
 
             # Обработка mp3
-            if filename.lower().endswith('.mp3'):
+            if filename.lower().endswith('.mp3', '.wav', '.aac'):
                 try:
                     cmd = [
                         'ffprobe',
@@ -214,6 +229,7 @@ if __name__ == "__main__":
         if not os.path.exists(sorted_dir):
             os.makedirs(sorted_dir)
 
+        delete_aae_files(base_directory)
         process_files(base_directory, sorted_dir)
 
         find_multicam_matches(sorted_dir)
