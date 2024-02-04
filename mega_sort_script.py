@@ -121,13 +121,14 @@ def find_multicam_matches(base_dir):
             os.symlink(file_path, link_name)
 
 
-def process_files(base_dir):
+def process_files(base_dir, sorted_dir):
     for foldername, _, filenames in os.walk(base_dir):
         for filename in filenames:
             file_path = os.path.join(foldername, filename)
-            
+
             # Обработка изображений
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.heic')):
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.heic',
+                                          '.tiff', '.gif', '.bmp', '.svg')):
                 try:
                     if filename.lower().endswith('.heic'):
                         img = Image.fromarray(imageio.imread(file_path))
@@ -137,13 +138,12 @@ def process_files(base_dir):
                     exif_data = img._getexif()
                     if exif_data and 272 in exif_data:
                         model = exif_data[272].replace(" ", "_").replace("/", "_")
-                        model_dir = os.path.join(base_dir, model)
-                        model_dir = model_dir + '_photo'
+                        model_dir = os.path.join(sorted_dir, model + '_photo')
                         if not os.path.exists(model_dir):
                             os.makedirs(model_dir)
                         shutil.move(file_path, model_dir)
                     else:
-                        no_exif_dir = os.path.join(base_dir, "Pictures")
+                        no_exif_dir = os.path.join(sorted_dir, "No_EXIF_Pictures")
                         if not os.path.exists(no_exif_dir):
                             os.makedirs(no_exif_dir)
                         shutil.move(file_path, no_exif_dir)
@@ -165,9 +165,8 @@ def process_files(base_dir):
                     tags = audio_data.get("format", {}).get("tags", {})
 
                     # Используем тег encoded_by для сортировки
-                    encoder = tags.get("encoded_by", "Unknown")
-                    encoder_dir = encoder.replace(" ", "_").replace("/", "_")
-                    audio_dir = os.path.join(base_dir, encoder_dir + '_audio')
+                    encoder = tags.get("encoded_by", "Unknown").replace(" ", "_").replace("/", "_")
+                    audio_dir = os.path.join(sorted_dir, encoder + '_audio')  # Изменено на sorted_dir
 
                     if not os.path.exists(audio_dir):
                         os.makedirs(audio_dir)
@@ -176,7 +175,7 @@ def process_files(base_dir):
                     print(f"Error processing audio {file_path}: {e}")
 
             # Обработка видео
-            if filename.lower().endswith(('.mp4', '.mov')):
+            if filename.lower().endswith(('.mp4', '.mov', '.avi', '.mkv', '.flv')):
                 try:
                     cmd = [
                         'ffprobe',
@@ -191,10 +190,9 @@ def process_files(base_dir):
                     tags = video_data.get("format", {}).get("tags", {})
 
                     # Используем модель камеры или кодировщик для сортировки
-                    folder_by_tag = tags.get("com.apple.quicktime.model", tags.get("encoder", "Unknown"))
-                    folder_by_tag = folder_by_tag.replace(" ", "_").replace("/", "_")
+                    folder_by_tag = tags.get("com.apple.quicktime.model", tags.get("encoder", "Unknown")).replace(" ", "_").replace("/", "_")
                     folder_by_tag = folder_by_tag + '_video'
-                    video_dir = os.path.join(base_dir, folder_by_tag)
+                    video_dir = os.path.join(sorted_dir, folder_by_tag)  # Изменено на sorted_dir
 
                     duration = float(video_data["format"]["duration"])
 
@@ -211,9 +209,15 @@ def process_files(base_dir):
 if __name__ == "__main__":
     base_directory = input("Введите путь к основной папке: ")
     if os.path.exists(base_directory) and os.path.isdir(base_directory):
-        process_files(base_directory)
-        find_multicam_matches(base_directory)
-        detect_timelapse_sequences(base_directory)
+        sorted_dir = os.path.join(base_directory, 'sorted')
+
+        if not os.path.exists(sorted_dir):
+            os.makedirs(sorted_dir)
+
+        process_files(base_directory, sorted_dir)
+
+        find_multicam_matches(sorted_dir)
+        detect_timelapse_sequences(sorted_dir)
     else:
         print("Ошибка: указанный путь не существует или не является папкой.")
 
