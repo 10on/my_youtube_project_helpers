@@ -175,7 +175,7 @@ if __name__ == "__main__":
         folders.append(directory)
 
     for directory in folders:
-        print('Кррутим папку ' + directory)
+        print('Крутим папку ' + directory)
         sort_images(directory)
         rotate_images(directory)
         delete_hands(directory)
